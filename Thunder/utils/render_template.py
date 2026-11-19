@@ -15,7 +15,7 @@ from Thunder.utils.human_readable import humanbytes
 from Thunder.utils.logger import logger
 from Thunder.vars import Var
 
-SITE_NAME = "Thunder"
+SITE_NAME = "ProXBotz"
 REPO_URL = "https://github.com/fyaz05/FileToLink"
 LOGO_URL = "https://cdn.jsdelivr.net/gh/fyaz05/Resources@main/ThunderGo/logo.png"
 
