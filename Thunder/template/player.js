@@ -1,6 +1,6 @@
 /**
- * Player page chrome: theme, external-player drawer, clipboard and download
- * feedback. Playback itself belongs to <movi-player>.
+ * ProXBotz player page chrome: theme, external-player drawer, clipboard and
+ * download feedback. Playback itself belongs to <movi-player>.
  */
 (() => {
   "use strict";
@@ -106,14 +106,14 @@
    */
   const TRACK_BUTTONS = [
     {
-      id: "thunder-audio-track",
+      id: "proxbotz-audio-track",
       label: "Audio track",
       title: "Audio track",
       selector: ".movi-audio-track-btn",
       icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 14v-4a2 2 0 0 1 2-2h2l4-4v16l-4-4H6a2 2 0 0 1-2-2z"/><path d="M16 8.5a5 5 0 0 1 0 7"/><path d="M19 6a9 9 0 0 1 0 12"/></svg>',
     },
     {
-      id: "thunder-subtitles",
+      id: "proxbotz-subtitles",
       label: "Subtitles",
       title: "Subtitles and captions",
       selector: ".movi-subtitle-track-btn",
@@ -350,8 +350,8 @@
     copyBtn.setAttribute("aria-label", "Link copied to clipboard");
     copyResetTimer = setTimeout(() => {
       copyBtn.classList.remove("is-confirmed");
-      if (label) label.textContent = originalText || "Copy Link";
-      copyBtn.setAttribute("aria-label", "Copy Link");
+      if (label) label.textContent = originalText || "Copy link";
+      copyBtn.setAttribute("aria-label", "Copy link");
     }, TOAST_VISIBLE_MS);
   };
 
@@ -392,6 +392,20 @@
     }, 1500);
   });
 
+  // ── File type chip ───────────────────────────────────────────────────────
+  // Telegram labels many documents application/octet-stream, which tells the
+  // visitor nothing. The extension (MKV, ZIP, APK) is more useful.
+  const setTypeLabel = () => {
+    const slot = document.getElementById("metaTypeText");
+    if (!slot) return;
+    const dot = fileName.lastIndexOf(".");
+    const ext = dot > 0 ? fileName.slice(dot + 1).trim() : "";
+    const generic = !mimeType || mimeType === "application/octet-stream";
+    if (ext && ext.length <= 6 && !/[\\/\s]/.test(ext) && generic) {
+      slot.textContent = ext.toUpperCase();
+    }
+  };
+
   // ── Footer year ──────────────────────────────────────────────────────────
   const setCopyrightYear = () => {
     const slot = document.getElementById("copyrightYear");
@@ -399,6 +413,7 @@
   };
 
   initTheme();
+  setTypeLabel();
   prunePlayerGroups();
   wirePlayerLinks();
   setCopyrightYear();
