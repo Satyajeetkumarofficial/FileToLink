@@ -94,7 +94,10 @@ async def start_command(bot: Client, msg: Message):
                     await asyncio.sleep(e.value)
                     return await msg.reply_text(text=MSG_TOKEN_INVALID)
             
-    txt = MSG_WELCOME.format(user_name=user.first_name if user else "Unknown")
+    txt = MSG_WELCOME.format(
+    user_name=user.first_name if user else "Unknown",
+    bot_name=bot.me.first_name,
+    )
     link, title = await get_force_info(bot)
     if link:
         txt += f"\n\n{MSG_COMMUNITY_CHANNEL.format(channel_title=title)}"
