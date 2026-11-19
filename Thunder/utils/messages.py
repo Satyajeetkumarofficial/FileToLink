@@ -135,7 +135,7 @@ MSG_BUTTON_CLOSE = "✖ Close"
 
 MSG_WELCOME = (
     "🌟 **Welcome, {user_name}!** 🌟\n\n"
-    "I'm **Thunder File to Link Bot** ⚡\n"
+    "I'm **{bot_name}** ⚡\n"
     "I generate direct download and streaming links for your files.\n\n"
     "**How to use:**\n"
     "1. Send any file to me for private links.\n"
