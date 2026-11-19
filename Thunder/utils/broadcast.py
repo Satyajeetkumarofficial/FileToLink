@@ -1,4 +1,8 @@
-# Thunder/utils/broadcast.py
+"""Owner-only mass messaging, with per-recipient retry and progress reporting.
+
+Sends to users in batches, tolerates FloodWait, and drops recipients Telegram
+says can no longer be reached.
+"""
 
 import asyncio
 import os
@@ -99,12 +103,10 @@ async def broadcast_message(client: Client, message: Message, mode: str = "all")
                 continue
 
             try:
-                success = False
                 for attempt in range(3):
                     try:
                         await message.reply_to_message.copy(user_id)
                         stats["success"] += 1
-                        success = True
                         break
                     except FloodWait as e:
                         if attempt < 2:
