@@ -145,7 +145,7 @@ MSG_WELCOME = (
 )
 
 MSG_HELP = (
-    "📘 **Thunder Bot - Help Guide** 📖\n\n"
+    "📘 **File To Stream Bot - Help Guide** 📖\n\n"
     "How to get direct download & streaming links:\n\n"
     "**🚀 Private Chat (with me):**\n"
     "> 1. Send me **any file** (document, video, audio, photo, etc.).\n"
@@ -177,7 +177,7 @@ MSG_HELP = (
 )
 
 MSG_ABOUT = (
-    "🌟 **About Thunder File to Link Bot** ℹ️\n\n"
+    "🌟 **About File to Link Bot** ℹ️\n\n"
     "I'm your go-to bot for **instant download & streaming!** ⚡\n\n"
     "**🚀 Key Features:**\n"
     "> **Instant Links:** Get your links within seconds.\n"
