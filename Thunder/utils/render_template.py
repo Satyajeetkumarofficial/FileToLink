@@ -16,25 +16,9 @@ from Thunder.utils.logger import logger
 from Thunder.vars import Var
 
 SITE_NAME = "ProXBotz"
-REPO_URL = "https://github.com/Satyajeetkumarofficial/FileToLink"
-LOGO_URL = "https://i.ibb.co/7xscp1yC/1795069624705.png"
 
 # Module-relative: the bot may be started from any working directory.
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "template"
-
-
-def _asset_version() -> str:
-    """Content hash of the player assets, for cache-busting query strings."""
-    digest = hashlib.sha256()
-    for name in ("player.css", "player.js"):
-        try:
-            digest.update((TEMPLATE_DIR / name).read_bytes())
-        except OSError:
-            continue
-    return digest.hexdigest()[:12]
-
-
-ASSET_VERSION = _asset_version()
 
 # movi-player demuxes the container itself, so these decide only which surface
 # to show, never whether playback is possible.
@@ -95,30 +79,36 @@ async def render_media_page(
     *,
     mime_type: str = "application/octet-stream",
     file_size: int = 0,
+    page_url: str = "",
 ) -> str:
-    """Render the player page for one file.
+    """Render the stream page (video/audio) or the download page (everything else).
 
     ``stream_url`` must be percent-encoded and carry ``?disposition=inline``; the
-    template escapes it (``|tojson`` in the config script, autoescape in markup).
+    templates escape it (``|tojson`` inside scripts, autoescape in markup).
+    ``page_url`` is the public address of the page itself (used for sharing).
     """
     normalized = (mime_type or "application/octet-stream").strip().lower()
     download_url = stream_url.split("?", 1)[0]
     kind = classify_media(file_name, normalized)
+    is_playable = kind in ("video", "audio")
+    extension = _extension_of(file_name)
 
     return template_env.render_template(
-        "req.html",
-        file_name=file_name,
-        stream_url=stream_url,
-        download_url=download_url,
+        "watch.html" if is_playable else "dl.html",
+        file_name=file_name.replace("_", " "),
+        file_name_raw=file_name,
+        file_url=stream_url,
+        dl_url=download_url,
+        watch_url=page_url or download_url,
+        file_size=humanbytes(file_size) if file_size else "Unknown",
+        # Stable per-file key (the player stores its resume position under it).
+        file_unique_id=hashlib.sha256(download_url.encode("utf-8")).hexdigest()[:16],
+        file_ext=extension.upper() if extension else "FILE",
         mime_type=normalized,
-        size_formatted=humanbytes(file_size) if file_size else "Unknown",
+        media_type=kind,
         is_video=kind == "video",
         is_audio=kind == "audio",
-        is_image=kind == "image",
         site_name=SITE_NAME,
-        repo_url=REPO_URL,
-        logo_url=LOGO_URL,
-        asset_version=ASSET_VERSION,
     )
 
 
@@ -146,6 +136,7 @@ async def render_page(message_id: int, secure_hash: str) -> str:
             f"{src}?disposition=inline",
             mime_type=get_mime_type(message),
             file_size=get_fsize(message),
+            page_url=urllib.parse.urljoin(Var.URL, f"watch/{secure_hash}{message_id}"),
         )
     except Exception as e:
         logger.error(
