@@ -18,10 +18,9 @@ from Thunder.utils.file_properties import get_fname, get_fsize, parse_fid
 from Thunder.utils.force_channel import force_channel_check, get_force_info
 from Thunder.utils.human_readable import humanbytes
 from Thunder.utils.logger import logger
-from Thunder.utils.messages import bot_display_name
 from Thunder.utils.messages import (
     MSG_ABOUT, MSG_BUTTON_ABOUT, MSG_BUTTON_CLOSE, MSG_BUTTON_GET_HELP,
-    MSG_BUTTON_CHANNEL, MSG_BUTTON_JOIN_CHANNEL, MSG_BUTTON_VIEW_PROFILE,
+    MSG_BUTTON_GITHUB, MSG_BUTTON_JOIN_CHANNEL, MSG_BUTTON_VIEW_PROFILE,
     MSG_COMMUNITY_CHANNEL, MSG_DC_ANON_ERROR, MSG_DC_FILE_ERROR,
     MSG_DC_FILE_INFO, MSG_DC_INVALID_USAGE, MSG_DC_UNKNOWN,
     MSG_ERROR_USER_INFO, MSG_FILE_TYPE_ANIMATION, MSG_FILE_TYPE_AUDIO,
@@ -95,10 +94,7 @@ async def start_command(bot: Client, msg: Message):
                     await asyncio.sleep(e.value)
                     return await msg.reply_text(text=MSG_TOKEN_INVALID)
             
-    txt = MSG_WELCOME.format(
-        user_name=user.first_name if user else "Unknown",
-        bot_name=bot_display_name(bot),
-    )
+    txt = MSG_WELCOME.format(user_name=user.first_name if user else "Unknown")
     link, title = await get_force_info(bot)
     if link:
         txt += f"\n\n{MSG_COMMUNITY_CHANNEL.format(channel_title=title)}"
@@ -106,7 +102,7 @@ async def start_command(bot: Client, msg: Message):
     btns = [
         [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command"),
          InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command")],
-        [InlineKeyboardButton(MSG_BUTTON_CHANNEL, url="https://t.me/ProXBotz"),
+        [InlineKeyboardButton(MSG_BUTTON_GITHUB, url="https://github.com/fyaz05/FileToLink/"),
          InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")]
     ]
     
@@ -126,7 +122,7 @@ async def help_command(bot: Client, msg: Message):
     if msg.from_user:
         await log_newusr(bot, msg.from_user.id, msg.from_user.first_name)
     
-    txt = MSG_HELP.format(max_files=Var.MAX_BATCH_FILES, bot_name=bot_display_name(bot))
+    txt = MSG_HELP.format(max_files=Var.MAX_BATCH_FILES)
     btns = [[InlineKeyboardButton(MSG_BUTTON_ABOUT, callback_data="about_command")]]
     
     link, title = await get_force_info(bot)
@@ -149,15 +145,15 @@ async def about_command(bot: Client, msg: Message):
     
     btns = [
         [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command")],
-        [InlineKeyboardButton(MSG_BUTTON_CHANNEL, url="https://t.me/ProXBotz"),
+        [InlineKeyboardButton(MSG_BUTTON_GITHUB, url="https://github.com/fyaz05/FileToLink/"),
          InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")]
     ]
     
     try:
-        await msg.reply_text(text=MSG_ABOUT.format(bot_name=bot_display_name(bot)), reply_markup=InlineKeyboardMarkup(btns))
+        await msg.reply_text(text=MSG_ABOUT, reply_markup=InlineKeyboardMarkup(btns))
     except FloodWait as e:
         await asyncio.sleep(e.value)
-        await msg.reply_text(text=MSG_ABOUT.format(bot_name=bot_display_name(bot)), reply_markup=InlineKeyboardMarkup(btns))
+        await msg.reply_text(text=MSG_ABOUT, reply_markup=InlineKeyboardMarkup(btns))
 
 async def send_user_dc(msg: Message, user: User):
     txt = await gen_dc_txt(user)
