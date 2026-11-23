@@ -9,7 +9,7 @@
 <p align="center">
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.15-blue?style=for-the-badge&logo=python" alt="Python Version"></a>
   <a href="https://github.com/rjriajul/wzgram"><img src="https://img.shields.io/badge/wzgram-red?style=for-the-badge" alt="wzgram"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/Satyajeetkumarofficial/FileToLinkStream?style=for-the-badge&color=green" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Satyajeetkumarofficial/FileToLink?style=for-the-badge&color=green" alt="License"></a>
   <a href="https://t.me/ProXBotz"><img src="https://img.shields.io/badge/Telegram-Channel-blue?style=for-the-badge&logo=telegram" alt="Telegram Channel"></a>
 </p>
 
@@ -297,8 +297,8 @@ This section covers the complete setup process for deploying ProXBotz, from prer
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/Satyajeetkumarofficial/FileToLinkStream.git
-cd FileToLinkStream
+git clone https://github.com/Satyajeetkumarofficial/FileToLink.git
+cd FileToLink
 
 # 2. Configure
 cp config_sample.env config.env
@@ -355,8 +355,8 @@ build context.
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/Satyajeetkumarofficial/FileToLinkStream.git
-cd FileToLinkStream
+git clone https://github.com/Satyajeetkumarofficial/FileToLink.git
+cd FileToLink
 
 # 2. Setup virtual environment
 python3 -m venv venv
@@ -427,7 +427,7 @@ After deployment, to add any additional environment variables, use the Koyeb das
 7. Restarts update from `UPSTREAM_REPO` only when the deployment has a git checkout. A Heroku slug is built from a tarball (step 5) and carries no `.git`, so the update is skipped and the dyno starts on the code in the slug. Durable changes need a new slug:
    ```bash
    # Only takes effect on a deployment that has a .git directory (e.g. a VM checkout).
-   heroku config:set UPSTREAM_REPO="https://github.com/Satyajeetkumarofficial/FileToLinkStream" UPSTREAM_BRANCH="main"
+   heroku config:set UPSTREAM_REPO="https://github.com/Satyajeetkumarofficial/FileToLink" UPSTREAM_BRANCH="main"
    ```
 
 > **Note:** Heroku provides HTTPS automatically. Set `FQDN` to `your-app-name.herokuapp.com` and `HAS_SSL` to `True`.

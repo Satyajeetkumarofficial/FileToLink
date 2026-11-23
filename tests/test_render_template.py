@@ -1,9 +1,10 @@
-"""Escape and layout checks for the stream and download pages.
+"""Escape and layout checks for the player page.
 
-MiniJinja has no contextual autoescaping, so the templates depend on |tojson
-inside <script> blocks and on attribute autoescaping for markup.
+MiniJinja has no contextual autoescaping, so the template depends on |tojson
+for the config blob and attribute autoescaping for markup.
 """
 import html
+import json
 import re
 from pathlib import Path
 
@@ -15,7 +16,6 @@ TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "Thunder" / "template"
 
 BREAKOUT = 'x" onload="alert(1)</script><script>alert(1)</script>'
 URL_WITH_AMPERSAND = "https://example.invalid/f/abc123/clip.mp4?disposition=inline&token=xyz"
-PLAYER_PIN = "movi-player@0.4.1"
 
 
 @pytest.fixture(autouse=True)
@@ -28,9 +28,11 @@ def _template_dir(monkeypatch):
     )
 
 
-def _hrefs(page: str) -> list[str]:
-    # The engine writes "/" as &#x2f;, which the browser decodes but Python does not.
-    return [html.unescape(h) for h in re.findall(r'href="([^"]+)"', page)]
+def _config_blob(page: str) -> dict:
+    """Extract and parse window.__CINEMA_CONFIG__ from a rendered page."""
+    match = re.search(r"window\.__CINEMA_CONFIG__ = (\{.*?\});\n", page, re.S)
+    assert match, "config blob not found"
+    return json.loads(match.group(1))
 
 
 async def test_video_page_embeds_stream_and_download_urls():
@@ -39,13 +41,14 @@ async def test_video_page_embeds_stream_and_download_urls():
     )
 
     assert "clip.mp4" in page
-    # The stream URL reaches the player script as a JSON string, escaped for JS.
-    assert '"https://example.invalid/f/abc123/clip.mp4?disposition=inline\\u0026token=xyz"' in page
-    # The download link drops the inline disposition query.
-    hrefs = _hrefs(page)
-    assert "https://example.invalid/f/abc123/clip.mp4" in hrefs
-    assert not any("disposition=inline" in h for h in hrefs), \
-        "a download link must not carry the inline disposition"
+    # The stream URL reaches the player through the JSON config, escaped for JS.
+    assert _config_blob(page)["src"] == URL_WITH_AMPERSAND
+    # The download link drops the inline disposition query. Unescape first: the
+    # engine writes "/" as &#x2f;, which the browser decodes but Python does not.
+    download_hrefs = [html.unescape(h) for h in re.findall(r'href="([^"]+)"', page)]
+    assert "https://example.invalid/f/abc123/clip.mp4" in download_hrefs
+    assert not any("disposition=inline" in h for h in download_hrefs), \
+        "the download link must not carry the inline disposition"
     assert "1.0 KB" in page
 
 
@@ -54,48 +57,60 @@ async def test_unknown_size_renders_a_placeholder():
     assert "Unknown" in page
 
 
+async def test_config_blob_is_json_parseable_and_preserves_the_url():
+    page = await render_template.render_media_page("clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4")
+    config = _config_blob(page)
+
+    assert config["src"] == URL_WITH_AMPERSAND
+    assert config["fileName"] == "clip.mp4"
+    assert config["mimeType"] == "video/mp4"
+    assert config["isVideo"] is True
+    assert config["isAudio"] is False
+
+
 async def test_script_context_does_not_break_out_of_the_script_tag():
     page = await render_template.render_media_page(BREAKOUT, URL_WITH_AMPERSAND, mime_type="video/mp4")
 
     assert "</script><script>alert(1)" not in page, "filename broke out of the script block"
-    assert "\\u003c/script\\u003e" in page, "the filename must reach the script as escaped JSON"
+
+    config = _config_blob(page)
+    assert config["fileName"] == BREAKOUT, "escaping must round-trip, not mangle"
+
+
+async def test_ampersand_is_escaped_per_context():
+    page = await render_template.render_media_page("clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4")
+
+    # In <script> it must be the JS escape, never the HTML entity.
+    assert "\\u0026token=xyz" in page
+    # In an attribute it must be HTML-escaped; unescape to compare.
+    srcs = [html.unescape(v) for v in re.findall(r'src="([^"]+)"', page)]
+    assert URL_WITH_AMPERSAND in srcs
 
 
 async def test_attribute_context_escapes_quotes_and_angles():
     page = await render_template.render_media_page(BREAKOUT, URL_WITH_AMPERSAND, mime_type="video/mp4")
 
-    assert 'onload="alert(1)' not in page, "filename escaped an attribute"
-    title = re.search(r"<title>(.*?)</title>", page, re.S)
-    assert title, "title element missing"
-    assert "<script>" not in title.group(1)
+    assert 'onload="alert(1)' not in page, "filename escaped the title attribute"
+    title_tags = re.findall(r'<h1 class="title"[^>]*>.*?</h1>', page, re.S)
+    assert title_tags, "title element missing"
+    assert "<script>" not in title_tags[0]
 
 
-async def test_video_page_uses_the_movi_player():
-    page = await render_template.render_media_page("clip.mkv", URL_WITH_AMPERSAND, mime_type="video/x-matroska")
-
-    assert PLAYER_PIN in page
-    assert 'id="videoFrame"' in page
-    assert 'id="audioSel"' in page, "audio track selector missing"
-    assert 'id="subSel"' in page, "subtitle selector missing"
-    assert "<audio" not in page
-
-
-async def test_audio_page_uses_the_audio_player():
+async def test_audio_page_uses_the_player():
     page = await render_template.render_media_page("song.mp3", URL_WITH_AMPERSAND, mime_type="audio/mpeg")
 
-    assert '<audio id="player"' in page
-    assert 'id="videoFrame"' not in page
-    assert 'id="audioSel"' not in page
+    assert "<movi-player" in page
+    assert "cinema--audio" in page
 
 
-async def test_image_page_renders_the_download_page():
+async def test_image_page_renders_an_image_viewer_and_no_player():
     page = await render_template.render_media_page(
         "photo.jpg", "https://example.invalid/f/abc/photo.jpg", mime_type="image/jpeg"
     )
 
-    assert 'class="cta-download"' in page
-    assert 'class="cta-stream"' not in page
-    assert PLAYER_PIN not in page
+    assert 'class="image-viewer"' in page
+    assert "<movi-player" not in page
+    assert "cinema--fallback" in page
 
 
 async def test_non_media_page_offers_a_download():
@@ -103,10 +118,17 @@ async def test_non_media_page_offers_a_download():
         "doc.pdf", "https://example.invalid/f/abc/doc.pdf", mime_type="application/pdf"
     )
 
-    assert 'class="cta-download"' in page
-    assert "doc.pdf" in page
-    assert PLAYER_PIN not in page
-    assert "https://example.invalid/f/abc/doc.pdf" in _hrefs(page)
+    assert 'class="non-media"' in page
+    assert "application/pdf" in page
+    assert "<movi-player" not in page
+
+
+async def test_player_is_configured_for_mkv_playback():
+    page = await render_template.render_media_page("clip.mkv", URL_WITH_AMPERSAND, mime_type="video/x-matroska")
+
+    # fallback="native" is what keeps an unreadable source from dead-ending.
+    assert 'fallback="native"' in page
+    assert "controls" in page
 
 
 @pytest.mark.parametrize(
@@ -146,36 +168,159 @@ async def test_octet_stream_mkv_still_gets_the_player():
         mime_type="application/octet-stream",
     )
 
-    assert PLAYER_PIN in page
-    assert 'class="cta-download"' not in page
+    assert "<movi-player" in page
+    assert 'class="non-media"' not in page
+    assert _config_blob(page)["isVideo"] is True
+
+
+async def test_non_media_copy_does_not_claim_the_browser_cannot_play_it():
+    page = await render_template.render_media_page(
+        "doc.pdf", "https://example.invalid/f/abc/doc.pdf", mime_type="application/pdf"
+    )
+
+    # movi handles containers itself, so only a non-media file says this.
+    assert "can&#x27;t be played in the browser" not in page
+    assert "nothing to play" in page
 
 
 async def test_player_cdn_is_pinned():
     page = await render_template.render_media_page("clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4")
 
-    # An unpinned CDN URL would ship releases unreviewed.
-    assert PLAYER_PIN in page
-    assert "movi-player@latest" not in page
+    # Playback is the primary path; an unpinned CDN URL would ship releases unreviewed.
+    assert "movi-player@0.4.1" in page
     assert "moviplayer.com/dist" not in page
 
 
-async def test_pages_carry_no_upstream_branding():
-    for name, mime in (("clip.mp4", "video/mp4"), ("doc.pdf", "application/pdf")):
-        page = await render_template.render_media_page(name, URL_WITH_AMPERSAND, mime_type=mime)
-        assert "ProXBotz" in page
-        assert "github.com" not in page.lower()
-        assert "fyaz05" not in page.lower()
+async def test_assets_are_served_locally_not_from_the_cdn():
+    page = await render_template.render_media_page("clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4")
+
+    assert "/assets/player.css" in page
+    assert "/assets/player.js" in page
+    assert "cdn.jsdelivr.net/gh/fyaz05/Resources@main/ThunderGo/player.min" not in page
 
 
-async def test_page_url_is_used_for_sharing_metadata():
-    page = await render_template.render_media_page(
-        "clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4",
-        page_url="https://example.invalid/watch/abc123456",
-    )
-    assert "https://example.invalid/watch/abc123456" in html.unescape(page)
+async def test_asset_urls_are_fingerprinted():
+    """The assets are cached immutably, so their URL must change with content."""
+    page = await render_template.render_media_page("clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4")
+
+    version = render_template.ASSET_VERSION
+    assert version and len(version) == 12
+    assert f'/assets/player.css?v={version}' in page
+    assert f'/assets/player.js?v={version}' in page
 
 
 async def test_unknown_template_variable_fails_loudly():
     """undefined_behavior="strict" must raise, not render an empty slot."""
     with pytest.raises(Exception):
-        render_template.template_env.render_template("watch.html", file_name="x")
+        render_template.template_env.render_template("req.html", file_name="x")
+
+
+def _hrefs(page: str) -> list[str]:
+    return [html.unescape(h) for h in re.findall(r'href="([^"]+)"', page)]
+
+
+async def test_video_page_has_audio_and_subtitle_pickers():
+    page = await render_template.render_media_page("clip.mkv", URL_WITH_AMPERSAND, mime_type="video/x-matroska")
+
+    assert 'id="audioSel"' in page
+    assert 'id="subSel"' in page
+    assert 'id="delay"' in page, "subtitle delay slider missing"
+    assert 'id="videoFrame"' in page
+
+
+async def test_pickers_only_appear_for_video():
+    for name, mime in (("song.mp3", "audio/mpeg"), ("photo.jpg", "image/jpeg"), ("doc.pdf", "application/pdf")):
+        page = await render_template.render_media_page(name, URL_WITH_AMPERSAND, mime_type=mime)
+        assert 'id="audioSel"' not in page, name
+        assert 'id="subSel"' not in page, name
+
+
+async def test_external_players_only_for_playable_files():
+    video = await render_template.render_media_page("clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4")
+    audio = await render_template.render_media_page("song.mp3", URL_WITH_AMPERSAND, mime_type="audio/mpeg")
+    image = await render_template.render_media_page("photo.jpg", URL_WITH_AMPERSAND, mime_type="image/jpeg")
+    other = await render_template.render_media_page("doc.pdf", URL_WITH_AMPERSAND, mime_type="application/pdf")
+
+    for page in (video, audio):
+        assert 'data-player="android-chooser"' in page
+        assert 'data-player="android-playit"' in page
+        assert 'data-player="desktop-vlc"' in page
+    for page in (image, other):
+        assert "data-player=" not in page
+
+
+async def test_movi_library_loads_only_where_it_is_used():
+    video = await render_template.render_media_page("clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4")
+    image = await render_template.render_media_page("photo.jpg", URL_WITH_AMPERSAND, mime_type="image/jpeg")
+    other = await render_template.render_media_page("doc.pdf", URL_WITH_AMPERSAND, mime_type="application/pdf")
+
+    assert "movi-player@0.4.1" in video
+    assert "movi-player@" not in image
+    assert "movi-player@" not in other
+
+
+async def test_resume_key_is_stable_per_file_and_differs_between_files():
+    first = await render_template.render_media_page("a.mp4", "https://example.invalid/f/abc/a.mp4?disposition=inline", mime_type="video/mp4")
+    again = await render_template.render_media_page("a.mp4", "https://example.invalid/f/abc/a.mp4?disposition=inline", mime_type="video/mp4")
+    other = await render_template.render_media_page("b.mp4", "https://example.invalid/f/xyz/b.mp4?disposition=inline", mime_type="video/mp4")
+
+    key = lambda page: re.search(r'resumekey="(f2l-[0-9a-f]{16})"', page).group(1)
+    assert key(first) == key(again)
+    assert key(first) != key(other)
+
+
+async def test_pages_carry_no_upstream_branding():
+    for name, mime in (("clip.mp4", "video/mp4"), ("photo.jpg", "image/jpeg"), ("doc.pdf", "application/pdf")):
+        page = await render_template.render_media_page(name, URL_WITH_AMPERSAND, mime_type=mime)
+        lowered = page.lower()
+        assert "github.com" not in lowered, name
+        assert "fyaz05" not in lowered, name
+        assert "thunder" not in lowered, name
+        assert "ProXBotz" in page, name
+        assert "https://t.me/ProXBotz" in _hrefs(page), name
+
+
+async def test_page_url_reaches_the_metadata_and_the_config():
+    page_url = "https://example.invalid/watch/abc123456"
+    page = await render_template.render_media_page(
+        "clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4", page_url=page_url
+    )
+
+    assert _config_blob(page)["pageUrl"] == page_url
+    assert page_url in html.unescape(page)
+
+
+async def test_config_blob_carries_the_download_url_without_the_inline_query():
+    page = await render_template.render_media_page("clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4")
+
+    assert _config_blob(page)["downloadUrl"] == "https://example.invalid/f/abc123/clip.mp4"
+
+
+async def test_home_page_renders_live_stats():
+    page = await render_template.render_home_page(
+        uptime_str="1d 2h",
+        total_clients=2,
+        is_multi_client=True,
+        total_active_streams=3,
+        clients=[
+            {"client_id": 1, "active_streams": 2},
+            {"client_id": 2, "active_streams": 1},
+        ],
+    )
+
+    assert "1d 2h" in page
+    assert "ProXBotz" in page
+    assert "github.com" not in page.lower()
+    assert "fyaz05" not in page.lower()
+
+
+async def test_home_page_renders_with_no_clients():
+    page = await render_template.render_home_page(
+        uptime_str="5s",
+        total_clients=0,
+        is_multi_client=False,
+        total_active_streams=0,
+        clients=[],
+    )
+
+    assert "5s" in page

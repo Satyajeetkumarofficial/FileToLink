@@ -16,9 +16,24 @@ from Thunder.utils.logger import logger
 from Thunder.vars import Var
 
 SITE_NAME = "ProXBotz"
+CHANNEL_URL = "https://t.me/ProXBotz"
 
 # Module-relative: the bot may be started from any working directory.
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "template"
+
+
+def _asset_version() -> str:
+    """Content hash of the player assets, for cache-busting query strings."""
+    digest = hashlib.sha256()
+    for name in ("player.css", "player.js"):
+        try:
+            digest.update((TEMPLATE_DIR / name).read_bytes())
+        except OSError:
+            continue
+    return digest.hexdigest()[:12]
+
+
+ASSET_VERSION = _asset_version()
 
 # movi-player demuxes the container itself, so these decide only which surface
 # to show, never whether playback is possible.
@@ -81,34 +96,53 @@ async def render_media_page(
     file_size: int = 0,
     page_url: str = "",
 ) -> str:
-    """Render the stream page (video/audio) or the download page (everything else).
+    """Render the player page for one file.
 
     ``stream_url`` must be percent-encoded and carry ``?disposition=inline``; the
-    templates escape it (``|tojson`` inside scripts, autoescape in markup).
-    ``page_url`` is the public address of the page itself (used for sharing).
+    template escapes it (``|tojson`` in the config script, autoescape in markup).
+    ``page_url`` is the public address of the page itself, used for sharing.
     """
     normalized = (mime_type or "application/octet-stream").strip().lower()
     download_url = stream_url.split("?", 1)[0]
     kind = classify_media(file_name, normalized)
-    is_playable = kind in ("video", "audio")
     extension = _extension_of(file_name)
 
     return template_env.render_template(
-        "watch.html" if is_playable else "dl.html",
-        file_name=file_name.replace("_", " "),
-        file_name_raw=file_name,
-        file_url=stream_url,
-        dl_url=download_url,
-        watch_url=page_url or download_url,
-        file_size=humanbytes(file_size) if file_size else "Unknown",
-        # Stable per-file key (the player stores its resume position under it).
-        file_unique_id=hashlib.sha256(download_url.encode("utf-8")).hexdigest()[:16],
-        file_ext=extension.upper() if extension else "FILE",
+        "req.html",
+        file_name=file_name,
+        stream_url=stream_url,
+        download_url=download_url,
         mime_type=normalized,
-        media_type=kind,
+        size_formatted=humanbytes(file_size) if file_size else "Unknown",
         is_video=kind == "video",
         is_audio=kind == "audio",
+        is_image=kind == "image",
+        file_ext=extension.upper() if extension else "FILE",
+        # Stable per-file key: the player stores its resume position under it.
+        file_key="f2l-" + hashlib.sha256(download_url.encode("utf-8")).hexdigest()[:16],
+        page_url=page_url or download_url,
         site_name=SITE_NAME,
+        channel_url=CHANNEL_URL,
+        asset_version=ASSET_VERSION,
+    )
+
+
+async def render_home_page(
+    *,
+    uptime_str: str,
+    total_clients: int,
+    is_multi_client: bool,
+    total_active_streams: int,
+    clients: list[dict],
+) -> str:
+    """Render the public status page served at ``/``."""
+    return template_env.render_template(
+        "home.html",
+        uptime_str=uptime_str,
+        total_clients=total_clients,
+        is_multi_client=is_multi_client,
+        total_active_streams=total_active_streams,
+        clients=clients,
     )
 
 

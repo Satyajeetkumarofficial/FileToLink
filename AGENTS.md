@@ -39,7 +39,7 @@ Thunder/
 │   ├── stream_routes.py     # HTTP streaming endpoints
 │   └── exceptions.py        # Custom HTTP exceptions
 ├── utils/                   # 20 modules — see imports below
-└── template/                # watch.html (stream page) + dl.html (download page), MiniJinja
+└── template/                # req.html + player.css / player.js (stream page), home.html (status page), MiniJinja
 ```
 
 ## Docker
