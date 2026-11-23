@@ -1,4 +1,4 @@
-# AGENTS.md — Thunder File-to-Link Bot
+# AGENTS.md — ProXBotz File-to-Link Bot
 
 Python 3.15 Telegram bot converting files to direct HTTP links. Uses wzgram, aiohttp, MongoDB, uvloop.
 
@@ -39,7 +39,7 @@ Thunder/
 │   ├── stream_routes.py     # HTTP streaming endpoints
 │   └── exceptions.py        # Custom HTTP exceptions
 ├── utils/                   # 20 modules — see imports below
-└── template/                # req.html (MiniJinja) + player.css / player.js
+└── template/                # req.html + player.css / player.js (stream page), home.html (status page), MiniJinja
 ```
 
 ## Docker

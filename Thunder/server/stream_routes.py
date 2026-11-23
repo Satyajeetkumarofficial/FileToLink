@@ -25,7 +25,11 @@ from Thunder.utils.canonical_files import (
 from Thunder.utils.custom_dl import ByteStreamer
 from Thunder.utils.file_properties import get_media
 from Thunder.utils.logger import logger
-from Thunder.utils.render_template import render_media_page, render_page
+from Thunder.utils.render_template import (
+    render_home_page,
+    render_media_page,
+    render_page,
+)
 from Thunder.utils.time_format import get_readable_time
 from Thunder.vars import Var
 
@@ -335,8 +339,41 @@ async def player_asset(request: web.Request):
 
 
 @routes.get("/", allow_head=True)
-async def root_redirect(request):
-    raise web.HTTPFound("https://github.com/fyaz05/FileToLink")
+async def root_page(request):
+    uptime_str = get_readable_time(time.time() - StartTime)
+    total_clients = len(multi_clients)
+    total_active_streams = sum(work_loads.values())
+    clients = [
+        {"client_id": cid, "active_streams": load}
+        for cid, load in sorted(work_loads.items())
+    ]
+
+    # The page polls this JSON every few seconds for live numbers.
+    if request.query.get("json") == "true":
+        return web.json_response(
+            {
+                "status": "online",
+                "uptime": uptime_str,
+                "multi_client": total_clients > 1,
+                "total_clients": total_clients,
+                "active_streams": total_active_streams,
+                "clients": clients,
+            },
+            headers={"Access-Control-Allow-Origin": "*"},
+        )
+
+    page = await render_home_page(
+        uptime_str=uptime_str,
+        total_clients=total_clients,
+        is_multi_client=total_clients > 1,
+        total_active_streams=total_active_streams,
+        clients=clients,
+    )
+    return web.Response(
+        text=page,
+        content_type="text/html",
+        headers={"X-Content-Type-Options": "nosniff"},
+    )
 
 
 @routes.get("/status", allow_head=True)
@@ -400,6 +437,7 @@ async def canonical_media_preview(request: web.Request):
             f"{src}?disposition=inline",
             mime_type=file_record.get("mime_type") or "application/octet-stream",
             file_size=int(file_record.get("file_size") or 0),
+            page_url=f"{Var.URL.rstrip('/')}/watch/f/{secure_hash}/{quote_media_name(file_name)}",
         )
 
         response = web.Response(

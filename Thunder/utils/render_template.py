@@ -15,9 +15,8 @@ from Thunder.utils.human_readable import humanbytes
 from Thunder.utils.logger import logger
 from Thunder.vars import Var
 
-SITE_NAME = "Thunder"
-REPO_URL = "https://github.com/fyaz05/FileToLink"
-LOGO_URL = "https://cdn.jsdelivr.net/gh/fyaz05/Resources@main/ThunderGo/logo.png"
+SITE_NAME = "ProXBotz"
+CHANNEL_URL = "https://t.me/ProXBotz"
 
 # Module-relative: the bot may be started from any working directory.
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "template"
@@ -95,15 +94,18 @@ async def render_media_page(
     *,
     mime_type: str = "application/octet-stream",
     file_size: int = 0,
+    page_url: str = "",
 ) -> str:
     """Render the player page for one file.
 
     ``stream_url`` must be percent-encoded and carry ``?disposition=inline``; the
     template escapes it (``|tojson`` in the config script, autoescape in markup).
+    ``page_url`` is the public address of the page itself, used for sharing.
     """
     normalized = (mime_type or "application/octet-stream").strip().lower()
     download_url = stream_url.split("?", 1)[0]
     kind = classify_media(file_name, normalized)
+    extension = _extension_of(file_name)
 
     return template_env.render_template(
         "req.html",
@@ -115,10 +117,32 @@ async def render_media_page(
         is_video=kind == "video",
         is_audio=kind == "audio",
         is_image=kind == "image",
+        file_ext=extension.upper() if extension else "FILE",
+        # Stable per-file key: the player stores its resume position under it.
+        file_key="f2l-" + hashlib.sha256(download_url.encode("utf-8")).hexdigest()[:16],
+        page_url=page_url or download_url,
         site_name=SITE_NAME,
-        repo_url=REPO_URL,
-        logo_url=LOGO_URL,
+        channel_url=CHANNEL_URL,
         asset_version=ASSET_VERSION,
+    )
+
+
+async def render_home_page(
+    *,
+    uptime_str: str,
+    total_clients: int,
+    is_multi_client: bool,
+    total_active_streams: int,
+    clients: list[dict],
+) -> str:
+    """Render the public status page served at ``/``."""
+    return template_env.render_template(
+        "home.html",
+        uptime_str=uptime_str,
+        total_clients=total_clients,
+        is_multi_client=is_multi_client,
+        total_active_streams=total_active_streams,
+        clients=clients,
     )
 
 
@@ -146,6 +170,7 @@ async def render_page(message_id: int, secure_hash: str) -> str:
             f"{src}?disposition=inline",
             mime_type=get_mime_type(message),
             file_size=get_fsize(message),
+            page_url=urllib.parse.urljoin(Var.URL, f"watch/{secure_hash}{message_id}"),
         )
     except Exception as e:
         logger.error(

@@ -1,6 +1,5 @@
 <p align="center">
-  <img src="https://cdn.jsdelivr.net/gh/fyaz05/Resources@main/FileToLink/Thunder.jpg" alt="Thunder Logo" width="120">
-  <h1 align="center">⚡ Thunder</h1>
+  <h1 align="center">⚡ ProXBotz</h1>
 </p>
 
 <p align="center">
@@ -10,8 +9,8 @@
 <p align="center">
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.15-blue?style=for-the-badge&logo=python" alt="Python Version"></a>
   <a href="https://github.com/rjriajul/wzgram"><img src="https://img.shields.io/badge/wzgram-red?style=for-the-badge" alt="wzgram"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/fyaz05/FileToLink?style=for-the-badge&color=green" alt="License"></a>
-  <a href="https://t.me/Thunder_Updates"><img src="https://img.shields.io/badge/Telegram-Channel-blue?style=for-the-badge&logo=telegram" alt="Telegram Channel"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/Satyajeetkumarofficial/FileToLink?style=for-the-badge&color=green" alt="License"></a>
+  <a href="https://t.me/ProXBotz"><img src="https://img.shields.io/badge/Telegram-Channel-blue?style=for-the-badge&logo=telegram" alt="Telegram Channel"></a>
 </p>
 
 <hr>
@@ -51,7 +50,7 @@
 
 ## About The Project
 
-**Thunder** is a powerful Telegram bot that transforms Telegram files into high-speed direct links, perfect for both streaming and rapid downloading. Share files via HTTP(S) links without needing to download them from the Telegram client first.
+**ProXBotz** is a powerful Telegram bot that transforms Telegram files into high-speed direct links, perfect for both streaming and rapid downloading. Share files via HTTP(S) links without needing to download them from the Telegram client first.
 
 ### 💡 Perfect For
 
@@ -117,7 +116,7 @@ Copy `config_sample.env` to `config.env` and fill in your values.
 | `BIN_CHANNEL` | Storage channel ID | `-1001234567890` |
 | `OWNER_ID` | Owner user ID | `12345678` |
 | `DATABASE_URL` | MongoDB connection | `mongodb+srv://...` |
-| `FQDN` | Domain/IP address | `f2l.thunder.com` |
+| `FQDN` | Domain/IP address | `f2l.example.com` |
 | `HAS_SSL` | HTTPS enabled | `True` or `False` |
 | `PORT` | Server port | `8080` |
 | `NO_PORT` | Hide port in URLs | `True` or `False` |
@@ -136,7 +135,7 @@ Copy `config_sample.env` to `config.env` and fill in your values.
 | `BANNED_CHANNELS` | Blocked channel IDs | *(empty)* |
 | `SLEEP_THRESHOLD` | Flood-wait threshold in seconds | `600` |
 | `WORKERS` | Async workers | `8` |
-| `NAME` | Bot name; also the MongoDB database name (unsafe chars become `_`) | `ThunderF2L` |
+| `NAME` | Bot name; also the MongoDB database name (unsafe chars become `_`) | `ProXBotzF2L` |
 | `BIND_ADDRESS` | Bind address | `0.0.0.0` |
 | `PING_INTERVAL` | Ping interval (seconds) | `840` |
 | `TOKEN_ENABLED` | Enable tokens | `False` |
@@ -247,7 +246,7 @@ URL_SHORTENER_SITE=shortener.example.com
 
 ### Rate Limiting System
 
-Thunder implements a sophisticated multi-tier rate limiting system designed for high-performance file sharing:
+ProXBotz implements a sophisticated multi-tier rate limiting system designed for high-performance file sharing:
 
 #### **Priority Queue Architecture**
 
@@ -279,7 +278,7 @@ Features include download/upload speeds, latency measurements, and shareable res
 
 ## Deployment Guide
 
-This section covers the complete setup process for deploying Thunder, from prerequisites to production deployment.
+This section covers the complete setup process for deploying ProXBotz, from prerequisites to production deployment.
 
 ### Prerequisites
 
@@ -298,7 +297,7 @@ This section covers the complete setup process for deploying Thunder, from prere
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/fyaz05/FileToLink.git
+git clone https://github.com/Satyajeetkumarofficial/FileToLink.git
 cd FileToLink
 
 # 2. Configure
@@ -306,9 +305,9 @@ cp config_sample.env config.env
 nano config.env  # Edit your settings
 
 # 3. Build and run (the config is mounted — it is not baked into the image)
-docker build -t thunder .
-docker run -d --name thunder -p 8080:8080 \
-  -v "$PWD/config.env:/app/config.env:ro" thunder
+docker build -t proxbotz .
+docker run -d --name proxbotz -p 8080:8080 \
+  -v "$PWD/config.env:/app/config.env:ro" proxbotz
 ```
 
 (PowerShell: `-v "${PWD}\config.env:/app/config.env:ro"`.)
@@ -325,8 +324,8 @@ chmod 644 config.env
 finish, since `docker stop` defaults to 10s:
 
 ```bash
-docker run -d --stop-timeout 30 --name thunder -p 8080:8080 \
-  -v "$PWD/config.env:/app/config.env:ro" thunder
+docker run -d --stop-timeout 30 --name proxbotz -p 8080:8080 \
+  -v "$PWD/config.env:/app/config.env:ro" proxbotz
 ```
 
 The image runs as unprivileged user `10001` without a build toolchain. Env files are
@@ -341,8 +340,8 @@ Docker's `--env-file` passes values verbatim, so inline comments and quotes in
 using `python-dotenv`:
 
 ```bash
-python3 -c "from dotenv import dotenv_values as d; [print(f'{k}={v}') for k, v in d('config.env').items()]" > /tmp/thunder-docker.env
-docker run -d --name thunder -p 8080:8080 --env-file /tmp/thunder-docker.env thunder
+python3 -c "from dotenv import dotenv_values as d; [print(f'{k}={v}') for k, v in d('config.env').items()]" > /tmp/proxbotz-docker.env
+docker run -d --name proxbotz -p 8080:8080 --env-file /tmp/proxbotz-docker.env proxbotz
 ```
 
 Requires `python-dotenv` locally (`pip install python-dotenv`); mounting `config.env`
@@ -356,7 +355,7 @@ build context.
 
 ```bash
 # 1. Clone repository
-git clone https://github.com/fyaz05/FileToLink.git
+git clone https://github.com/Satyajeetkumarofficial/FileToLink.git
 cd FileToLink
 
 # 2. Setup virtual environment
@@ -374,7 +373,7 @@ nano config.env
 python -m Thunder
 ```
 
-> **Tip:** Start with the essential configuration to get Thunder running, then add optional features as needed.
+> **Tip:** Start with the essential configuration to get ProXBotz running, then add optional features as needed.
 
 </details>
 
@@ -382,21 +381,21 @@ python -m Thunder
 
 ### Deploy to Koyeb
 
-[![Deploy to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=docker&image=docker.io/fyaz05/thunder:latest&name=thunder&ports=8080;http;/&env[API_ID]=&env[API_HASH]=&env[BOT_TOKEN]=&env[BIN_CHANNEL]=&env[OWNER_ID]=&env[DATABASE_URL]=&env[FQDN]=)
+[![Deploy to Koyeb](https://www.koyeb.com/static/images/deploy/button.svg)](https://app.koyeb.com/deploy?type=docker&image=docker.io/YOUR_DOCKERHUB_USER/proxbotz:latest&name=proxbotz&ports=8080;http;/&env[API_ID]=&env[API_HASH]=&env[BOT_TOKEN]=&env[BIN_CHANNEL]=&env[OWNER_ID]=&env[DATABASE_URL]=&env[FQDN]=)
 
 After deployment, to add any additional environment variables, use the Koyeb dashboard under **Settings** → **Environment Variables**.
 
 ### Deploy to Render
 
 1. Open [Render Dashboard](https://dashboard.render.com) → **New** → **Web Service**
-2. Choose **Existing Image**: `fyaz05/thunder:latest`
+2. Choose **Existing Image**: `YOUR_DOCKERHUB_USER/proxbotz:latest`
 3. Add your environment variables
 4. Click **Deploy**
 
 ### Deploy to Railway
 
 1. Open [Railway](https://railway.app) → **New Project** → **Deploy Service**
-2. Choose **Docker Image**: `fyaz05/thunder:latest`
+2. Choose **Docker Image**: `YOUR_DOCKERHUB_USER/proxbotz:latest`
 3. Add your environment variables
 4. Click **Deploy**
 
@@ -428,7 +427,7 @@ After deployment, to add any additional environment variables, use the Koyeb das
 7. Restarts update from `UPSTREAM_REPO` only when the deployment has a git checkout. A Heroku slug is built from a tarball (step 5) and carries no `.git`, so the update is skipped and the dyno starts on the code in the slug. Durable changes need a new slug:
    ```bash
    # Only takes effect on a deployment that has a .git directory (e.g. a VM checkout).
-   heroku config:set UPSTREAM_REPO="https://github.com/fyaz05/FileToLink" UPSTREAM_BRANCH="main"
+   heroku config:set UPSTREAM_REPO="https://github.com/Satyajeetkumarofficial/FileToLink" UPSTREAM_BRANCH="main"
    ```
 
 > **Note:** Heroku provides HTTPS automatically. Set `FQDN` to `your-app-name.herokuapp.com` and `HAS_SSL` to `True`.
@@ -453,7 +452,7 @@ This guide will help you set up a secure reverse proxy using **NGINX** for your 
 
 - A **VPS or server** running Ubuntu/Debian with NGINX installed.
 - Your **file streaming bot** running on a local port (e.g., `8080`).
-- A **subdomain** (e.g., `f2l.thunder.com`) set up in **Cloudflare**.
+- A **subdomain** (e.g., `f2l.example.com`) set up in **Cloudflare**.
 - **Cloudflare Origin Certificate** files: `cert.pem` and `key.key`.
 
 ---
@@ -470,27 +469,27 @@ This guide will help you set up a secure reverse proxy using **NGINX** for your 
 Create a folder for your certificates and place `cert.pem` and `key.key` inside. Secure the private key.
 
 ```bash
-sudo mkdir -p /etc/ssl/cloudflare/f2l.thunder.com
+sudo mkdir -p /etc/ssl/cloudflare/f2l.example.com
 # Move/copy your cert.pem and key.key files into this directory
-sudo chmod 600 /etc/ssl/cloudflare/f2l.thunder.com/key.key
-sudo chmod 644 /etc/ssl/cloudflare/f2l.thunder.com/cert.pem
+sudo chmod 600 /etc/ssl/cloudflare/f2l.example.com/key.key
+sudo chmod 644 /etc/ssl/cloudflare/f2l.example.com/cert.pem
 ```
 
 ---
 
 #### 🛠️ Step 3: Create NGINX Configuration
 
-Create a new file at `/etc/nginx/sites-available/f2l.thunder.conf` and paste the following, replacing `f2l.thunder.com` and `8080` with your values.
+Create a new file at `/etc/nginx/sites-available/f2l.example.conf` and paste the following, replacing `f2l.example.com` and `8080` with your values.
 
 ```nginx
 server {
     listen 443 ssl;
     listen [::]:443 ssl;
-    server_name f2l.thunder.com;
+    server_name f2l.example.com;
 
     # SSL Configuration
-    ssl_certificate     /etc/ssl/cloudflare/f2l.thunder.com/cert.pem;
-    ssl_certificate_key /etc/ssl/cloudflare/f2l.thunder.com/key.key;
+    ssl_certificate     /etc/ssl/cloudflare/f2l.example.com/cert.pem;
+    ssl_certificate_key /etc/ssl/cloudflare/f2l.example.com/key.key;
 
     # Basic security
     add_header X-Frame-Options DENY;
@@ -515,7 +514,7 @@ server {
 server {
     listen 80;
     listen [::]:80;
-    server_name f2l.thunder.com;
+    server_name f2l.example.com;
     return 301 https://$host$request_uri;
 }
 ```
@@ -527,7 +526,7 @@ server {
 Enable the configuration, test it, and reload NGINX.
 
 ```bash
-sudo ln -s /etc/nginx/sites-available/f2l.thunder.conf /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/f2l.example.conf /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
@@ -552,7 +551,7 @@ A: This is usually a configuration issue. Please check the following:
 **Q: What do I use for the `FQDN` variable?**
 A: It's the public URL or IP address of your bot.
 
-- **With a Domain**: Use your subdomain (e.g., `f2l.thunder.com`).
+- **With a Domain**: Use your subdomain (e.g., `f2l.example.com`).
 - **On Koyeb/Render/Heroku**: Use the public URL provided by the platform.
 - **On a VPS**: Use your server's public IP address.
 
@@ -643,6 +642,6 @@ This project is not affiliated with Telegram. Use it responsibly and in complian
 
 <p align="center">
   <b>⭐ Star this project if you find it useful!</b><br>
-  <a href="https://github.com/fyaz05/FileToLink/issues/new">Report Bug</a> •
-  <a href="https://github.com/fyaz05/FileToLink/issues/new">Request Feature</a>
+  <a href="https://t.me/ProXBotz">Report Bug</a> •
+  <a href="https://t.me/ProXBotz">Request Feature</a>
 </p>

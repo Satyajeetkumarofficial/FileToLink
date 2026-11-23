@@ -213,3 +213,114 @@ async def test_unknown_template_variable_fails_loudly():
     """undefined_behavior="strict" must raise, not render an empty slot."""
     with pytest.raises(Exception):
         render_template.template_env.render_template("req.html", file_name="x")
+
+
+def _hrefs(page: str) -> list[str]:
+    return [html.unescape(h) for h in re.findall(r'href="([^"]+)"', page)]
+
+
+async def test_video_page_has_audio_and_subtitle_pickers():
+    page = await render_template.render_media_page("clip.mkv", URL_WITH_AMPERSAND, mime_type="video/x-matroska")
+
+    assert 'id="audioSel"' in page
+    assert 'id="subSel"' in page
+    assert 'id="delay"' in page, "subtitle delay slider missing"
+    assert 'id="videoFrame"' in page
+
+
+async def test_pickers_only_appear_for_video():
+    for name, mime in (("song.mp3", "audio/mpeg"), ("photo.jpg", "image/jpeg"), ("doc.pdf", "application/pdf")):
+        page = await render_template.render_media_page(name, URL_WITH_AMPERSAND, mime_type=mime)
+        assert 'id="audioSel"' not in page, name
+        assert 'id="subSel"' not in page, name
+
+
+async def test_external_players_only_for_playable_files():
+    video = await render_template.render_media_page("clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4")
+    audio = await render_template.render_media_page("song.mp3", URL_WITH_AMPERSAND, mime_type="audio/mpeg")
+    image = await render_template.render_media_page("photo.jpg", URL_WITH_AMPERSAND, mime_type="image/jpeg")
+    other = await render_template.render_media_page("doc.pdf", URL_WITH_AMPERSAND, mime_type="application/pdf")
+
+    for page in (video, audio):
+        assert 'data-player="android-chooser"' in page
+        assert 'data-player="android-playit"' in page
+        assert 'data-player="desktop-vlc"' in page
+    for page in (image, other):
+        assert "data-player=" not in page
+
+
+async def test_movi_library_loads_only_where_it_is_used():
+    video = await render_template.render_media_page("clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4")
+    image = await render_template.render_media_page("photo.jpg", URL_WITH_AMPERSAND, mime_type="image/jpeg")
+    other = await render_template.render_media_page("doc.pdf", URL_WITH_AMPERSAND, mime_type="application/pdf")
+
+    assert "movi-player@0.4.1" in video
+    assert "movi-player@" not in image
+    assert "movi-player@" not in other
+
+
+async def test_resume_key_is_stable_per_file_and_differs_between_files():
+    first = await render_template.render_media_page("a.mp4", "https://example.invalid/f/abc/a.mp4?disposition=inline", mime_type="video/mp4")
+    again = await render_template.render_media_page("a.mp4", "https://example.invalid/f/abc/a.mp4?disposition=inline", mime_type="video/mp4")
+    other = await render_template.render_media_page("b.mp4", "https://example.invalid/f/xyz/b.mp4?disposition=inline", mime_type="video/mp4")
+
+    key = lambda page: re.search(r'resumekey="(f2l-[0-9a-f]{16})"', page).group(1)
+    assert key(first) == key(again)
+    assert key(first) != key(other)
+
+
+async def test_pages_carry_no_upstream_branding():
+    for name, mime in (("clip.mp4", "video/mp4"), ("photo.jpg", "image/jpeg"), ("doc.pdf", "application/pdf")):
+        page = await render_template.render_media_page(name, URL_WITH_AMPERSAND, mime_type=mime)
+        lowered = page.lower()
+        assert "github.com" not in lowered, name
+        assert "fyaz05" not in lowered, name
+        assert "thunder" not in lowered, name
+        assert "ProXBotz" in page, name
+        assert "https://t.me/ProXBotz" in _hrefs(page), name
+
+
+async def test_page_url_reaches_the_metadata_and_the_config():
+    page_url = "https://example.invalid/watch/abc123456"
+    page = await render_template.render_media_page(
+        "clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4", page_url=page_url
+    )
+
+    assert _config_blob(page)["pageUrl"] == page_url
+    assert page_url in html.unescape(page)
+
+
+async def test_config_blob_carries_the_download_url_without_the_inline_query():
+    page = await render_template.render_media_page("clip.mp4", URL_WITH_AMPERSAND, mime_type="video/mp4")
+
+    assert _config_blob(page)["downloadUrl"] == "https://example.invalid/f/abc123/clip.mp4"
+
+
+async def test_home_page_renders_live_stats():
+    page = await render_template.render_home_page(
+        uptime_str="1d 2h",
+        total_clients=2,
+        is_multi_client=True,
+        total_active_streams=3,
+        clients=[
+            {"client_id": 1, "active_streams": 2},
+            {"client_id": 2, "active_streams": 1},
+        ],
+    )
+
+    assert "1d 2h" in page
+    assert "ProXBotz" in page
+    assert "github.com" not in page.lower()
+    assert "fyaz05" not in page.lower()
+
+
+async def test_home_page_renders_with_no_clients():
+    page = await render_template.render_home_page(
+        uptime_str="5s",
+        total_clients=0,
+        is_multi_client=False,
+        total_active_streams=0,
+        clients=[],
+    )
+
+    assert "5s" in page

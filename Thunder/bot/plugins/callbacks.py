@@ -15,9 +15,10 @@ from Thunder.bot import StreamBot
 from Thunder.utils.broadcast import broadcast_ids
 from Thunder.utils.decorators import owner_only
 from Thunder.utils.logger import logger
+from Thunder.utils.messages import bot_display_name
 from Thunder.utils.messages import (
     MSG_ABOUT, MSG_BROADCAST_CANCEL, MSG_BUTTON_ABOUT, MSG_BUTTON_CLOSE,
-    MSG_BUTTON_GET_HELP, MSG_BUTTON_GITHUB, MSG_BUTTON_JOIN_CHANNEL,
+    MSG_BUTTON_GET_HELP, MSG_BUTTON_CHANNEL, MSG_BUTTON_JOIN_CHANNEL,
     MSG_ERROR_BROADCAST_INSTRUCTION, MSG_ERROR_BROADCAST_RESTART,
     MSG_ERROR_CALLBACK_UNSUPPORTED, MSG_HELP
 )
@@ -54,14 +55,20 @@ async def help_callback(client: Client, callback_query: CallbackQuery):
         buttons.append([InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")])
         try:
             await callback_query.message.edit_text(
-                text=MSG_HELP.format(max_files=Var.MAX_BATCH_FILES),
+                text=MSG_HELP.format(
+                    max_files=Var.MAX_BATCH_FILES,
+                    bot_name=bot_display_name(client),
+                ),
                 reply_markup=InlineKeyboardMarkup(buttons),
                 disable_web_page_preview=True
             )
         except FloodWait as e:
             await asyncio.sleep(e.value)
             await callback_query.message.edit_text(
-                text=MSG_HELP.format(max_files=Var.MAX_BATCH_FILES),
+                text=MSG_HELP.format(
+                    max_files=Var.MAX_BATCH_FILES,
+                    bot_name=bot_display_name(client),
+                ),
                 reply_markup=InlineKeyboardMarkup(buttons),
                 disable_web_page_preview=True
             )
@@ -82,20 +89,20 @@ async def about_callback(client: Client, callback_query: CallbackQuery):
         buttons = [
             [InlineKeyboardButton(MSG_BUTTON_GET_HELP, callback_data="help_command")],
             [
-                InlineKeyboardButton(MSG_BUTTON_GITHUB, url="https://github.com/fyaz05/FileToLink"),
+                InlineKeyboardButton(MSG_BUTTON_CHANNEL, url="https://t.me/ProXBotz"),
                 InlineKeyboardButton(MSG_BUTTON_CLOSE, callback_data="close_panel")
             ]
         ]
         try:
             await callback_query.message.edit_text(
-                text=MSG_ABOUT,
+                text=MSG_ABOUT.format(bot_name=bot_display_name(client)),
                 reply_markup=InlineKeyboardMarkup(buttons),
                 disable_web_page_preview=True
             )
         except FloodWait as e:
             await asyncio.sleep(e.value)
             await callback_query.message.edit_text(
-                text=MSG_ABOUT,
+                text=MSG_ABOUT.format(bot_name=bot_display_name(client)),
                 reply_markup=InlineKeyboardMarkup(buttons),
                 disable_web_page_preview=True
             )
